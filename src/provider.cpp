@@ -77,7 +77,8 @@ public:
         if (off != len) return E_FAIL;
 
         std::vector<float> tris;
-        if (!stlthumb::LoadStl(buf.data(), len, tris)) return E_FAIL;
+        // Try STL first (binary or ASCII), then OBJ.
+        if (!stlthumb::LoadStl(buf.data(), len, tris) && !stlthumb::LoadObj(buf.data(), len, tris)) return E_FAIL;
         buf.clear(); buf.shrink_to_fit();
 
         stlthumb::RenderConfig cfg = stlthumb::LoadConfigFromRegistry();
@@ -190,14 +191,20 @@ STDAPI DllRegisterServer() {
     hr = SetRegValue(HKEY_CURRENT_USER, key, L"ThreadingModel", L"Apartment");
     if (FAILED(hr)) return hr;
 
-    // Bind to .stl via the IThumbnailProvider shellex interface GUID.
+    // Bind to .stl and .obj via the IThumbnailProvider shellex interface GUID.
     hr = SetRegValue(HKEY_CURRENT_USER,
         L"Software\\Classes\\.stl\\ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}",
         nullptr, clsidStr);
     if (FAILED(hr)) return hr;
 
+    hr = SetRegValue(HKEY_CURRENT_USER,
+        L"Software\\Classes\\.obj\\ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}",
+        nullptr, clsidStr);
+    if (FAILED(hr)) return hr;
+
     // Explorer runs thumbnail handlers in a surrogate; treat-as-image hint:
     SetRegValue(HKEY_CURRENT_USER, L"Software\\Classes\\.stl", L"PerceivedType", L"Document");
+    SetRegValue(HKEY_CURRENT_USER, L"Software\\Classes\\.obj", L"PerceivedType", L"Document");
 
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     return S_OK;
@@ -209,6 +216,7 @@ STDAPI DllUnregisterServer() {
     swprintf_s(key, L"Software\\Classes\\CLSID\\%s", clsidStr);
     RegDeleteTreeW(HKEY_CURRENT_USER, key);
     RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\.stl\\ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}");
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\.obj\\ShellEx\\{E357FCCD-A995-4576-B01F-234630154E96}");
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     return S_OK;
 }

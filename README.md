@@ -1,6 +1,6 @@
 # StlThumbnail
 
-Windows Explorer thumbnail handler for **.stl** files (ASCII + binary), with a
+Windows Explorer thumbnail handler for **.stl** and **.obj** files (ASCII + binary STL, Wavefront OBJ), with a
 WPF helper app to configure how previews are rendered: camera angle, model
 color, background, and lighting.
 
@@ -10,7 +10,7 @@ color, background, and lighting.
 |---|---|
 | `src/` | Native COM DLL: `IThumbnailProvider` + software rasterizer (no dependencies) |
 | `config-app/` | WPF helper app (`StlThumbConfig.exe`) with live preview |
-| `test/` | Test STL generators, render harness, shell-pipeline verifier |
+| `test/` | Test STL/OBJ generators, render harness, shell-pipeline verifier, OBJ parser regression test |
 | `build.cmd` | Builds `build/StlThumbnail.dll` with MSVC (x64) |
 | `install.cmd` / `uninstall.cmd` | Per-user registration (no admin required) |
 
@@ -36,7 +36,7 @@ produces `dist\` — copy that folder to **any Windows 11 x64 machine** and run
   (shlwapi, gdi32, advapi32, shell32, kernel32)
 - `sample.stl`, `install.cmd`, `uninstall.cmd`
 
-Explorer immediately starts using the handler for `.stl` files in any icon
+Explorer immediately starts using the handler for `.stl` and `.obj` files in any icon
 view. Existing thumbnails are cached by Windows; press **F5** in the folder or
 clear the thumbnail cache (`cleanmgr` → Thumbnails) to force regeneration.
 
@@ -59,8 +59,10 @@ ambient + key light intensity, key light direction/height.
   pixel-identical to what Explorer shows.
 - Registration is per-user (`HKCU\Software\Classes`), CLSID
   `{5E9BBB1E-9B37-4E22-A0F0-3D8B62D3C10A}`, bound to
-  `.stl\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}`.
+  `.stl\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}` and
+  `.obj\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}`.
 - Binary STLs starting with "solid" are detected via the 84+50n size equation.
+- OBJ parser supports triangular and quadrilateral faces (quads are triangulated).
 - Triangle count is capped at 8M for thumbnail rendering.
 
 ## Verify
@@ -70,6 +72,17 @@ python test\test_render.py                          :: renders via the DLL C API
 test\build_verify.cmd                               :: builds + runs the shell-pipeline check
 build\verify_shell.exe <abs path>.stl out.bmp       :: IShellItemImageFactory (same path Explorer uses)
 ```
+
+The OBJ parser has a standalone regression harness (`test/test_obj.cpp`) that
+loads a file through `LoadObj` and prints the triangle count — it guards against
+the parser-hang class of bug that a malformed or Rhino-exported OBJ can trigger:
+
+```
+cl /std:c++17 /EHsc /MT test\test_obj.cpp src\renderer.cpp /Fe:build\test_obj.exe
+build\test_obj.exe test\test_stl.obj     :: Rhino mesh export  -> 1024 triangles
+build\test_obj.exe test\test_nurbs.obj   :: NURBS export (no faces) -> 0, clean reject
+```
+
 
 ## License
 

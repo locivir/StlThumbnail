@@ -7,6 +7,88 @@
 
 namespace stlthumb {
 
+// ---------------------------------------------------------------- OBJ parsing
+
+bool LoadObj(const uint8_t* data, size_t len, std::vector<float>& tris) {
+    tris.clear();
+    if (!data || len == 0) return false;
+    
+    // Parse OBJ: collect vertices (v x y z) and faces (f v1 v2 v3 ...).
+    // OBJ uses 1-based indices; we only support triangular faces for simplicity.
+    std::vector<float> verts;
+    const char* p = (const char*)data;
+    const char* end = p + len;
+    
+    while (p < end) {
+        const char* lineStart = p;
+        const char* lineEnd = p;
+        while (lineEnd < end && *lineEnd != '\n' && *lineEnd != '\r') ++lineEnd;
+        
+        // Skip whitespace at start
+        while (lineStart < lineEnd && (*lineStart == ' ' || *lineStart == '\t')) ++lineStart;
+        
+        if (lineStart + 1 < lineEnd && lineStart[0] == 'v' && (lineStart[1] == ' ' || lineStart[1] == '\t')) {
+            // Vertex line: "v x y z"
+            char* after = nullptr;
+            float vx = strtof(lineStart + 2, &after);
+            if (after > lineStart + 2) {
+                float vy = strtof(after, &after);
+                if (after > lineStart + 2) {
+                    float vz = strtof(after, &after);
+                    verts.push_back(vx);
+                    verts.push_back(vy);
+                    verts.push_back(vz);
+                }
+            }
+        } else if (lineStart + 1 < lineEnd && lineStart[0] == 'f' && (lineStart[1] == ' ' || lineStart[1] == '\t')) {
+            // Face line: "f v1/vt1/vn1 v2/vt2/vn2 v3/vt3/vn3 ..."
+            const char* q = lineStart + 2;
+            int indices[4] = { 0, 0, 0, 0 };
+            int count = 0;
+            
+            while (q < lineEnd && count < 4) {
+                while (q < lineEnd && (*q == ' ' || *q == '\t')) ++q;
+                if (q >= lineEnd) break;
+                
+                // Parse leading vertex index (ignore any /vt/vn suffix).
+                int idx = (int)strtol(q, nullptr, 10);
+                if (idx != 0) {
+                    // OBJ uses 1-based indexing; negatives are relative to end.
+                    indices[count++] = (idx > 0) ? (idx - 1) : ((int)verts.size() / 3 + idx);
+                }
+                // Advance past the whole whitespace-delimited token (v/vt/vn).
+                while (q < lineEnd && *q != ' ' && *q != '\t') ++q;
+            }
+            
+            // Triangulate (support quads by splitting into two triangles).
+            // Validate every index against the vertex list first so a malformed
+            // face can never read out of bounds (which would crash the shell host).
+            int nverts = (int)(verts.size() / 3);
+            bool valid = (count >= 3);
+            for (int k = 0; k < count && valid; ++k)
+                if (indices[k] < 0 || indices[k] >= nverts) valid = false;
+            if (valid) {
+                auto emit = [&](int i) {
+                    tris.push_back(verts[i * 3]);
+                    tris.push_back(verts[i * 3 + 1]);
+                    tris.push_back(verts[i * 3 + 2]);
+                };
+                emit(indices[0]); emit(indices[1]); emit(indices[2]);
+                if (count >= 4) { // second triangle of the quad
+                    emit(indices[0]); emit(indices[2]); emit(indices[3]);
+                }
+            }
+        }
+        
+        // Advance past the line terminator(s) so the outer loop makes progress.
+        // Without this, p would stay parked on '\r'/'\n' and spin forever.
+        p = lineEnd;
+        while (p < end && (*p == '\r' || *p == '\n')) ++p;
+    }
+    
+    return !tris.empty();
+}
+
 // ---------------------------------------------------------------- STL parsing
 
 static bool isAsciiStl(const uint8_t* data, size_t len) {

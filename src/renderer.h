@@ -22,6 +22,11 @@ struct RenderConfig {
 // On success fills `tris` with 9 floats per triangle (v0 v1 v2, xyz each).
 bool LoadStl(const uint8_t* data, size_t len, std::vector<float>& tris);
 
+// Parses OBJ (Wavefront) from a memory buffer.
+// On success fills `tris` with 9 floats per triangle (v0 v1 v2, xyz each).
+// Supports triangular and quadrilateral faces (quads are triangulated).
+bool LoadObj(const uint8_t* data, size_t len, std::vector<float>& tris);
+
 // Renders triangles into a size x size 32bpp BGRA buffer (premultiplied alpha,
 // top-down row order). Returns false if there is nothing to render.
 bool RenderStl(const std::vector<float>& tris, int size, const RenderConfig& cfg,
