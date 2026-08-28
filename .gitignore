@@ -1,0 +1,6 @@
+build/
+config-app/bin/
+config-app/obj/
+test/*.bmp
+test/*.png
+test/*.stl
