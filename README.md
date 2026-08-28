@@ -18,9 +18,23 @@ color, background, and lighting.
 
 ```
 build.cmd                                   :: native DLL  -> build\StlThumbnail.dll
-cd config-app && dotnet build -c Release    :: helper app
+cd config-app && dotnet build -c Release    :: helper app (framework-dependent, dev use)
 install.cmd                                 :: register for current user
 ```
+
+### Zero-dependency package for other machines
+
+```
+publish.cmd
+```
+
+produces `dist\` — copy that folder to **any Windows 11 x64 machine** and run
+`install.cmd` there. No .NET runtime, no VC++ redistributable, no admin:
+
+- `StlThumbConfig.exe` — self-contained single-file publish (~133 MB, runtime bundled)
+- `StlThumbnail.dll` — statically linked CRT (`/MT`); imports only inbox DLLs
+  (shlwapi, gdi32, advapi32, shell32, kernel32)
+- `sample.stl`, `install.cmd`, `uninstall.cmd`
 
 Explorer immediately starts using the handler for `.stl` files in any icon
 view. Existing thumbnails are cached by Windows; press **F5** in the folder or
