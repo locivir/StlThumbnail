@@ -16,7 +16,10 @@ All notable changes to StlThumbnail are documented here.
 - Per-user registry binding for `.obj` (`DllRegisterServer`), including
   `PerceivedType=Document`, with matching cleanup in `DllUnregisterServer`.
 - `test/test_obj.cpp` — a standalone regression harness that loads an OBJ file
-  through `LoadObj` and reports triangle count, proving the parser terminates.
+  through `LoadObj` and asserts the triangle count, proving the parser
+  terminates. Wired into `test/build_verify.cmd`, which now runs the OBJ
+  regression (test_stl.obj → 1024, test_nurbs.obj → 0, cube.obj → 12) before
+  the shell-pipeline check and fails the run on any mismatch.
 - Rhino 8 test fixtures: `test/test_stl.obj` (mesh export) and
   `test/test_nurbs.obj` (NURBS surface export, no mesh faces).
 

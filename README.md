@@ -74,13 +74,15 @@ build\verify_shell.exe <abs path>.stl out.bmp       :: IShellItemImageFactory (s
 ```
 
 The OBJ parser has a standalone regression harness (`test/test_obj.cpp`) that
-loads a file through `LoadObj` and prints the triangle count — it guards against
-the parser-hang class of bug that a malformed or Rhino-exported OBJ can trigger:
+loads a file through `LoadObj` and asserts the triangle count — it guards against
+the parser-hang class of bug that a malformed or Rhino-exported OBJ can trigger.
+`test\build_verify.cmd` runs it automatically before the shell-pipeline check
+and fails on any mismatch. To run it on its own:
 
 ```
 cl /std:c++17 /EHsc /MT test\test_obj.cpp src\renderer.cpp /Fe:build\test_obj.exe
-build\test_obj.exe test\test_stl.obj     :: Rhino mesh export  -> 1024 triangles
-build\test_obj.exe test\test_nurbs.obj   :: NURBS export (no faces) -> 0, clean reject
+build\test_obj.exe test\test_stl.obj 1024   :: Rhino mesh export  -> 1024 triangles
+build\test_obj.exe test\test_nurbs.obj 0    :: NURBS export (no faces) -> 0, clean reject
 ```
 
 
