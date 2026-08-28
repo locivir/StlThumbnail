@@ -70,3 +70,9 @@ python test\test_render.py                          :: renders via the DLL C API
 test\build_verify.cmd                               :: builds + runs the shell-pipeline check
 build\verify_shell.exe <abs path>.stl out.bmp       :: IShellItemImageFactory (same path Explorer uses)
 ```
+
+## License
+
+Released into the public domain under [The Unlicense](LICENSE). Do whatever you
+want with it.
+
